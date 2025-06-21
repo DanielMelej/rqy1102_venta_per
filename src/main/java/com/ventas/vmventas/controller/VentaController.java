@@ -58,22 +58,17 @@ public class VentaController {
     }
 }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Venta> actualizar(@PathVariable Integer id, @RequestBody Venta ventaActualizada) {
-        try {
-            Venta ventaExistente = ventaService.findById(id);
-            
-            // Actualizar campos
-            ventaExistente.setProductoId(ventaActualizada.getProductoId());
-            ventaExistente.setCantidad(ventaActualizada.getCantidad());
-            ventaExistente.setTotal(ventaActualizada.getTotal());
-
-            Venta ventaGuardada = ventaService.save(ventaExistente);
-            return ResponseEntity.ok(ventaGuardada);
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
+@PutMapping("/{id}")
+public ResponseEntity<?> actualizar(@PathVariable Integer id, @RequestBody Venta ventaActualizada) {
+    try {
+        Venta ventaActualizadaGuardada = ventaService.updateVenta(id, ventaActualizada);
+        return ResponseEntity.ok(ventaActualizadaGuardada);
+    } catch (RuntimeException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    } catch (Exception e) {
+        return ResponseEntity.status(500).body("Error interno al actualizar la venta");
     }
+}
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {

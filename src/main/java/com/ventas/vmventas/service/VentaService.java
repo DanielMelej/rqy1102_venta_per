@@ -52,8 +52,51 @@ public class VentaService {
         return ventaRepository.save(venta);
     }
 
-    public void delete(Integer id) {
-        ventaRepository.deleteById(id);
+
+    public Venta updateVenta(Integer id, Venta ventaActualizada) {
+    Venta ventaExistente = findById(id);
+
+    if (!ventaExistente.getProductoId().equals(ventaActualizada.getProductoId())) {
+        throw new RuntimeException("No se puede cambiar el producto de una venta existente");
     }
 
+    int cantidadOriginal = ventaExistente.getCantidad();
+    int cantidadNueva = ventaActualizada.getCantidad();
+    int diferencia = cantidadOriginal - cantidadNueva;
+
+    ProductoDTO producto = productoServiceClient.obtenerProductoPorId(ventaExistente.getProductoId());
+    if (producto == null) {
+        throw new RuntimeException("Producto no encontrado");
+    }
+
+    int stockActual = producto.getStock();
+    int stockNuevo = stockActual + diferencia;
+
+    if (stockNuevo < 0) {
+        throw new RuntimeException("Stock insuficiente para esta modificación");
+    }
+
+    producto.setStock(stockNuevo);
+    productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
+
+    ventaExistente.setCantidad(cantidadNueva);
+    ventaExistente.setTotal(producto.getPrecio() * cantidadNueva);
+
+    return ventaRepository.save(ventaExistente);
+}
+
+public void delete(Integer id) {
+    Venta ventaExistente = ventaRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Venta no encontrada con id: " + id));
+    
+    ProductoDTO producto = productoServiceClient.obtenerProductoPorId(ventaExistente.getProductoId());
+    if (producto == null) {
+        throw new RuntimeException("Producto no encontrado");
+    }
+
+    producto.setStock(producto.getStock() + ventaExistente.getCantidad());
+    productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
+
+    ventaRepository.deleteById(id);
+}
 }
