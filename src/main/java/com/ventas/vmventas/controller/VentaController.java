@@ -16,59 +16,53 @@ import com.ventas.vmventas.model.Venta;
 import com.ventas.vmventas.service.VentaService;
 
 @RestController
-@RequestMapping("/api/v1/ventas")
+@RequestMapping("${app.api.base-url}/ventas")
 public class VentaController {
     @Autowired
     public VentaService ventaService;
 
     @GetMapping
-    public ResponseEntity<List<Venta>> listar(){
+    public ResponseEntity<List<Venta>> listar() {
         List<Venta> ventas = ventaService.getAllVentas();
-        if (ventas.isEmpty()){
+        if (ventas.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(ventas);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Venta> buscar(@PathVariable Integer id){
-        try{
+    public ResponseEntity<Venta> buscar(@PathVariable Integer id) {
+        try {
             Venta venta = ventaService.findById(id);
             return ResponseEntity.ok(venta);
-        } catch (Exception e){
+        } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    // @PostMapping
-    // public ResponseEntity<Venta> createVenta(@RequestBody Venta venta) {
-    //     Venta savedVenta = ventaService.save(venta);
-    //     return ResponseEntity.ok(savedVenta);
-    // }
-
     @PostMapping
     public ResponseEntity<?> createVenta(@RequestBody Venta venta) {
-    try {
-        Venta savedVenta = ventaService.save(venta);
-        return ResponseEntity.ok(savedVenta);
-    } catch (RuntimeException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
-    } catch (Exception e) {
-        return ResponseEntity.status(500).body("Error interno al guardar la venta");
+        try {
+            Venta savedVenta = ventaService.save(venta);
+            return ResponseEntity.ok(savedVenta);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error interno al guardar la venta");
+        }
     }
-}
 
-@PutMapping("/{id}")
-public ResponseEntity<?> actualizar(@PathVariable Integer id, @RequestBody Venta ventaActualizada) {
-    try {
-        Venta ventaActualizadaGuardada = ventaService.updateVenta(id, ventaActualizada);
-        return ResponseEntity.ok(ventaActualizadaGuardada);
-    } catch (RuntimeException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
-    } catch (Exception e) {
-        return ResponseEntity.status(500).body("Error interno al actualizar la venta");
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizar(@PathVariable Integer id, @RequestBody Venta ventaActualizada) {
+        try {
+            Venta ventaActualizadaGuardada = ventaService.updateVenta(id, ventaActualizada);
+            return ResponseEntity.ok(ventaActualizadaGuardada);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error interno al actualizar la venta");
+        }
     }
-}
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
@@ -79,7 +73,4 @@ public ResponseEntity<?> actualizar(@PathVariable Integer id, @RequestBody Venta
             return ResponseEntity.notFound().build();
         }
     }
-
-
-
 }

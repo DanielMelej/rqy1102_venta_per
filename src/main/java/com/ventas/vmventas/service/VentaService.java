@@ -20,17 +20,13 @@ public class VentaService {
     @Autowired
     private ProductoServiceClient productoServiceClient;
 
-    public List<Venta> getAllVentas(){
+    public List<Venta> getAllVentas() {
         return ventaRepository.findAll();
     }
 
-    public Venta findById(Integer id){
+    public Venta findById(Integer id) {
         return ventaRepository.findById(id).get();
     }
-
-    // public Venta save(Venta venta){
-    //     return ventaRepository.save(venta);
-    // }
 
     public Venta save(Venta venta) {
         // Paso 1: Obtener producto desde el otro microservicio
@@ -52,51 +48,50 @@ public class VentaService {
         return ventaRepository.save(venta);
     }
 
-
     public Venta updateVenta(Integer id, Venta ventaActualizada) {
-    Venta ventaExistente = findById(id);
+        Venta ventaExistente = findById(id);
 
-    if (!ventaExistente.getProductoId().equals(ventaActualizada.getProductoId())) {
-        throw new RuntimeException("No se puede cambiar el producto de una venta existente");
+        if (!ventaExistente.getProductoId().equals(ventaActualizada.getProductoId())) {
+            throw new RuntimeException("No se puede cambiar el producto de una venta existente");
+        }
+
+        int cantidadOriginal = ventaExistente.getCantidad();
+        int cantidadNueva = ventaActualizada.getCantidad();
+        int diferencia = cantidadOriginal - cantidadNueva;
+
+        ProductoDTO producto = productoServiceClient.obtenerProductoPorId(ventaExistente.getProductoId());
+        if (producto == null) {
+            throw new RuntimeException("Producto no encontrado");
+        }
+
+        int stockActual = producto.getStock();
+        int stockNuevo = stockActual + diferencia;
+
+        if (stockNuevo < 0) {
+            throw new RuntimeException("Stock insuficiente para esta modificación");
+        }
+
+        producto.setStock(stockNuevo);
+        productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
+
+        ventaExistente.setCantidad(cantidadNueva);
+        ventaExistente.setTotal(producto.getPrecio() * cantidadNueva);
+
+        return ventaRepository.save(ventaExistente);
     }
 
-    int cantidadOriginal = ventaExistente.getCantidad();
-    int cantidadNueva = ventaActualizada.getCantidad();
-    int diferencia = cantidadOriginal - cantidadNueva;
+    public void delete(Integer id) {
+        Venta ventaExistente = ventaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Venta no encontrada con id: " + id));
 
-    ProductoDTO producto = productoServiceClient.obtenerProductoPorId(ventaExistente.getProductoId());
-    if (producto == null) {
-        throw new RuntimeException("Producto no encontrado");
+        ProductoDTO producto = productoServiceClient.obtenerProductoPorId(ventaExistente.getProductoId());
+        if (producto == null) {
+            throw new RuntimeException("Producto no encontrado");
+        }
+
+        producto.setStock(producto.getStock() + ventaExistente.getCantidad());
+        productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
+
+        ventaRepository.deleteById(id);
     }
-
-    int stockActual = producto.getStock();
-    int stockNuevo = stockActual + diferencia;
-
-    if (stockNuevo < 0) {
-        throw new RuntimeException("Stock insuficiente para esta modificación");
-    }
-
-    producto.setStock(stockNuevo);
-    productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
-
-    ventaExistente.setCantidad(cantidadNueva);
-    ventaExistente.setTotal(producto.getPrecio() * cantidadNueva);
-
-    return ventaRepository.save(ventaExistente);
-}
-
-public void delete(Integer id) {
-    Venta ventaExistente = ventaRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Venta no encontrada con id: " + id));
-    
-    ProductoDTO producto = productoServiceClient.obtenerProductoPorId(ventaExistente.getProductoId());
-    if (producto == null) {
-        throw new RuntimeException("Producto no encontrado");
-    }
-
-    producto.setStock(producto.getStock() + ventaExistente.getCantidad());
-    productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
-
-    ventaRepository.deleteById(id);
-}
 }
