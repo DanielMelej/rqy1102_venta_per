@@ -1,5 +1,6 @@
 package com.ventas.vmventas.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,64 +42,39 @@ public class VentaService {
             throw new RuntimeException("❌ La cantidad debe ser mayor a 0");
         }
 
-        // Paso 1: Obtener producto desde el otro microservicio
+        // 🔐 Validar que el cliente NO envíe la fecha manualmente
+        if (venta.getFecha() != null) {
+            throw new RuntimeException("❌ No está permitido establecer la fecha manualmente");
+        }
+
+        // ✅ Ahora que validamos todo, procedemos a obtener el producto
         ProductoDTO producto = productoServiceClient.obtenerProductoPorId(venta.getProductoId());
 
         if (producto == null) {
             throw new RuntimeException("❌ El producto no existe");
         }
 
-        // Paso 2: Validar stock
+        // Validar stock
         if (producto.getStock() < venta.getCantidad()) {
             throw new RuntimeException("❌ Stock insuficiente para el producto solicitado");
         }
 
-        // Paso 3: Descontar stock
+        // Descontar stock
         producto.setStock(producto.getStock() - venta.getCantidad());
 
-        // Paso 4: Actualizar producto
+        // Actualizar el producto
         productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
 
-        // Paso 5: Calcular total y guardar la venta
+        // Calcular total
         venta.setTotal(producto.getPrecio() * venta.getCantidad());
 
+        // Asignar fecha automáticamente
+        venta.setFecha(LocalDateTime.now());
+
+        // Guardar venta
         return ventaRepository.save(venta);
     }
 
-    // public Venta updateVenta(Integer id, Venta ventaActualizada) {
-    // Venta ventaExistente = findById(id);
-
-    // if (!ventaExistente.getProductoId().equals(ventaActualizada.getProductoId()))
-    // {
-    // throw new RuntimeException("No se puede cambiar el producto de una venta
-    // existente");
-    // }
-
-    // int cantidadOriginal = ventaExistente.getCantidad();
-    // int cantidadNueva = ventaActualizada.getCantidad();
-    // int diferencia = cantidadOriginal - cantidadNueva;
-
-    // ProductoDTO producto =
-    // productoServiceClient.obtenerProductoPorId(ventaExistente.getProductoId());
-    // if (producto == null) {
-    // throw new RuntimeException("Producto no encontrado");
-    // }
-
-    // int stockActual = producto.getStock();
-    // int stockNuevo = stockActual + diferencia;
-
-    // if (stockNuevo < 0) {
-    // throw new RuntimeException("Stock insuficiente para esta modificación");
-    // }
-
-    // producto.setStock(stockNuevo);
-    // productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
-
-    // ventaExistente.setCantidad(cantidadNueva);
-    // ventaExistente.setTotal(producto.getPrecio() * cantidadNueva);
-
-    // return ventaRepository.save(ventaExistente);
-    // }
 
     public Venta updateVenta(Integer id, Venta ventaActualizada) {
         if (ventaActualizada == null) {
@@ -127,6 +103,11 @@ public class VentaService {
         if (ventaActualizada.getTotal() != null &&
                 !ventaActualizada.getTotal().equals(ventaExistente.getTotal())) {
             throw new RuntimeException("❌ No está permitido modificar el total manualmente");
+        }
+
+        if (ventaActualizada.getFecha() != null &&
+        !ventaActualizada.getFecha().equals(ventaExistente.getFecha())) {
+            throw new RuntimeException("❌ No está permitido modificar la fecha de la venta");
         }
 
         // Recalcular la diferencia de cantidad

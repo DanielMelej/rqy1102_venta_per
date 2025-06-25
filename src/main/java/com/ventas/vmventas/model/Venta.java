@@ -1,6 +1,8 @@
 package com.ventas.vmventas.model;
 
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -28,5 +30,9 @@ public class Venta {
     @Column(nullable = false)
     private Integer cantidad;
 
+    @Column
     private Float total;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime fecha;
 }
