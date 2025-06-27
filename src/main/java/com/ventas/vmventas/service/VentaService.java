@@ -1,5 +1,6 @@
 package com.ventas.vmventas.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,51 +30,97 @@ public class VentaService {
         return ventaRepository.findById(id).get();
     }
 
-    public Venta save(Venta venta) {
-        if (venta == null) {
-            throw new RuntimeException("❌ La venta no puede ser nula");
-        }
+    // public Venta save(Venta venta) {
+    //     if (venta == null) {
+    //         throw new RuntimeException("❌ La venta no puede ser nula");
+    //     }
 
-        if (venta.getProductoId() == null) {
-            throw new RuntimeException("❌ El ID del producto no puede ser nulo");
-        }
+    //     if (venta.getProductoId() == null) {
+    //         throw new RuntimeException("❌ El ID del producto no puede ser nulo");
+    //     }
 
-        if (venta.getCantidad() == null || venta.getCantidad() <= 0) {
-            throw new RuntimeException("❌ La cantidad debe ser mayor a 0");
-        }
+    //     if (venta.getCantidad() == null || venta.getCantidad() <= 0) {
+    //         throw new RuntimeException("❌ La cantidad debe ser mayor a 0");
+    //     }
 
-        // 🔐 Validar que el cliente NO envíe la fecha manualmente
-        if (venta.getFecha() != null) {
-            throw new RuntimeException("❌ No está permitido establecer la fecha manualmente");
-        }
+    //     // 🔐 Validar que el cliente NO envíe la fecha manualmente
+    //     if (venta.getFecha() != null) {
+    //         throw new RuntimeException("❌ No está permitido establecer la fecha manualmente");
+    //     }
 
-        // ✅ Ahora que validamos todo, procedemos a obtener el producto
-        ProductoDTO producto = productoServiceClient.obtenerProductoPorId(venta.getProductoId());
 
-        if (producto == null) {
-            throw new RuntimeException("❌ El producto no existe");
-        }
+    //     // ✅ Ahora que validamos todo, procedemos a obtener el producto
+    //     ProductoDTO producto = productoServiceClient.obtenerProductoPorId(venta.getProductoId());
 
-        // Validar stock
-        if (producto.getStock() < venta.getCantidad()) {
-            throw new RuntimeException("❌ Stock insuficiente para el producto solicitado");
-        }
+    //     if (producto == null) {
+    //         throw new RuntimeException("❌ El producto no existe");
+    //     }
 
-        // Descontar stock
-        producto.setStock(producto.getStock() - venta.getCantidad());
+    //     // Validar stock
+    //     if (producto.getStock() < venta.getCantidad()) {
+    //         throw new RuntimeException("❌ Stock insuficiente para el producto solicitado");
+    //     }
 
-        // Actualizar el producto
-        productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
+    //     // Descontar stock
+    //     producto.setStock(producto.getStock() - venta.getCantidad());
 
-        // Calcular total
-        venta.setTotal(producto.getPrecio() * venta.getCantidad());
+    //     // Actualizar el producto
+    //     productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
 
-        // Asignar fecha automáticamente
-        venta.setFecha(LocalDateTime.now());
+    //     // Calcular total
+    //     venta.setTotal(producto.getPrecio() * venta.getCantidad());
 
-        // Guardar venta
-        return ventaRepository.save(venta);
+    //     // Asignar fecha automáticamente
+    //     venta.setFecha(LocalDateTime.now());
+
+    //     // Guardar venta
+    //     return ventaRepository.save(venta);
+    // }
+
+
+    public Venta save(Venta venta, boolean permitirFechaManual) {
+    if (venta == null) {
+        throw new RuntimeException("❌ La venta no puede ser nula");
     }
+
+    if (venta.getProductoId() == null) {
+        throw new RuntimeException("❌ El ID del producto no puede ser nulo");
+    }
+
+    if (venta.getCantidad() == null || venta.getCantidad() <= 0) {
+        throw new RuntimeException("❌ La cantidad debe ser mayor a 0");
+    }
+
+    // Solo permite establecer una fecha manual si se indica explícitamente
+    if (!permitirFechaManual && venta.getFecha() != null) {
+        throw new RuntimeException("❌ No está permitido establecer la fecha manualmente");
+    }
+
+    // Si no se envió una fecha y no es una carga especial, se pone la fecha actual
+    if (venta.getFecha() == null) {
+        venta.setFecha(LocalDateTime.now());
+    }
+
+    // Obtener el producto desde el microservicio
+    ProductoDTO producto = productoServiceClient.obtenerProductoPorId(venta.getProductoId());
+    if (producto == null) {
+        throw new RuntimeException("❌ El producto no existe");
+    }
+
+    if (producto.getStock() < venta.getCantidad()) {
+        throw new RuntimeException("❌ Stock insuficiente para el producto solicitado");
+    }
+
+    // Descontar stock y actualizar producto
+    producto.setStock(producto.getStock() - venta.getCantidad());
+    productoServiceClient.actualizarProducto(producto.getIdProducto(), producto);
+
+    // Calcular total
+    venta.setTotal(producto.getPrecio() * venta.getCantidad());
+
+    // Guardar venta
+    return ventaRepository.save(venta);
+}
 
 
     public Venta updateVenta(Integer id, Venta ventaActualizada) {
@@ -152,4 +199,13 @@ public class VentaService {
 
         ventaRepository.deleteById(id);
     }
+
+    public List<Venta> buscarPorRangoFecha(LocalDate inicio, LocalDate fin) {
+        // Convierte LocalDate al rango completo del día: desde inicio 00:00 hasta fin 23:59:59.999999999
+        LocalDateTime inicioDateTime = inicio.atStartOfDay();
+        LocalDateTime finDateTime = fin.atTime(23, 59, 59, 999999999);
+
+        return ventaRepository.findByFechaBetween(inicioDateTime, finDateTime);
+    }
+
 }
