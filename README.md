@@ -42,6 +42,8 @@ src/
 - Actualizar la cantidad vendida (y ajustar el stock en el otro servicio).
 - Eliminar una venta (y reponer el stock).
 - Evitar que el usuario ingrese manualmente la fecha o el total.
+- Permitir opcionalmente establecer la fecha de forma manual, útil para carga masiva o pruebas con datos antiguos.
+- Buscar ventas entre dos fechas específicas (formato `yyyy-MM-dd`).
 
 ---
 
@@ -95,21 +97,24 @@ cd repositorio
 
 ---
 
-## Endpoints disponibles
+## Endpoints disponibles     
 
-| Método | Endpoint                | Descripción                         |
-|--------|--------------------------|-------------------------------------|
-| GET    | `/api/v1/ventas`         | Listar todas las ventas             |
-| GET    | `/api/v1/ventas/{id}`    | Obtener venta por ID                |
-| POST   | `/api/v1/ventas`         | Crear una venta                     |
-| PUT    | `/api/v1/ventas/{id}`    | Actualizar cantidad de una venta    |
-| DELETE | `/api/v1/ventas/{id}`    | Eliminar una venta y reponer stock  |
+| Método | Endpoint                                                 | Descripción                                                     |
+| ------ | -------------------------------------------------------- | --------------------------------------------------------------- |
+| GET    | `/api/v1/ventas`                                         | Listar todas las ventas                                         |
+| GET    | `/api/v1/ventas/{id}`                                    | Obtener venta por ID                                            |
+| POST   | `/api/v1/ventas`                                         | Crear una venta con la fecha actual                             |
+| POST   | `/api/v1/ventas?permitirFecha=true`                      | Crear una venta permitiendo ingresar la fecha manualmente       |
+| PUT    | `/api/v1/ventas/{id}`                                    | Actualizar cantidad de una venta                                |
+| DELETE | `/api/v1/ventas/{id}`                                    | Eliminar una venta y reponer el stock correspondiente           |
+| GET    | `/api/v1/ventas/buscar?inicio=YYYY-MM-DD&fin=YYYY-MM-DD` | Buscar ventas entre dos fechas (sin hora, formato `yyyy-MM-dd`) |
 
 ---
 
 ## Consideraciones
 
 - El campo `fecha` se asigna automáticamente. Si el cliente intenta enviarlo manualmente, se lanza una excepción.
+- Si se desea establecer la fecha manualmente (por ejemplo, al cargar datos antiguos), debe incluirse el parámetro ?permitirFecha=true en la URL del POST.
 - El stock se actualiza **solo si se valida correctamente la venta**.
 - Las excepciones están controladas y devuelven mensajes descriptivos.
 
